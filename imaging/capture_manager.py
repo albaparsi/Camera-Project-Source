@@ -142,6 +142,25 @@ def run_capture_plan(
 
     raw_by_filter: Dict[int, List[Path]] = {f.filter_id: [] for f in enabled_filters}
     metadata_log: List[Dict[str, Any]] = []
+
+    light_off = None
+    run_find_start = None
+    try:
+        from ui import testlight  # type: ignore[import-not-found]
+
+        testlight.light_on()
+        light_off = testlight.light_off
+        print("[HW] Sequence LED on")
+    except Exception as exc:
+        print(f"[HW] Sequence LED unavailable: {exc}")
+
+    try:
+        from ui.FindStart import run_find_start as _run_find_start  # type: ignore[import-not-found]
+
+        run_find_start = _run_find_start
+    except Exception as exc:
+        print(f"[HW] FindStart unavailable: {exc}")
+
     camera.start()
     try:
         for seq in range(plan.sequences):
@@ -239,6 +258,19 @@ def run_capture_plan(
         }
     finally:
         camera.stop()
+        if light_off is not None:
+            try:
+                light_off()
+                print("[HW] Sequence LED off")
+            except Exception as exc:
+                print(f"[HW] Failed to switch LED off: {exc}")
+
+        if run_find_start is not None:
+            try:
+                print("[HW] Re-homing filter wheel with FindStart...")
+                run_find_start()
+            except Exception as exc:
+                print(f"[HW] FindStart failed after sequence: {exc}")
 
 
 def make_auto_plan(
