@@ -83,6 +83,13 @@ class Camera:
     def capture_auto(self, filename):
         """Capture with auto exposure"""
         return self.capture(filename, iso=None, shutter_speed=None)
+
+    def capture_frame(self):
+        """Capture a single preview frame as a NumPy array."""
+        if not self.is_started:
+            self.start()
+
+        return self.picam.capture_array()
     
     def get_current_settings(self):
         """Get current exposure settings"""

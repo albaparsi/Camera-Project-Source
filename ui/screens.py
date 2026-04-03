@@ -32,7 +32,7 @@ START_DELAY_SECONDS = 0  # 0–30 seconds
 
 WIDTH, HEIGHT = 800, 480
 
-HOME_ITEMS = ["Auto", "Manual", "Image review", "Settings"]
+HOME_ITEMS = ["Auto", "Manual", "Live view", "Image review", "Settings"]
 
 
 class HomeScreen:
@@ -56,6 +56,8 @@ class HomeScreen:
                 elif choice == "Manual":
                     # Manual flow goes to filter selection first
                     self.ui.current_screen = FilterSelectScreen(self.ui, next_mode="manual")
+                elif choice == "Live view":
+                    self.ui.current_screen = LiveViewScreen(self.ui)
                 elif choice == "Image review":
                     self.ui.current_screen = ImageReviewScreen(self.ui)
                 elif choice == "Settings":
@@ -242,6 +244,87 @@ class AutoSetupScreen:
             text = self.font.render(label, True, color)
             rect = text.get_rect(center=(WIDTH // 2, start_y + i * line_h))
             screen.blit(text, rect)
+
+
+class LiveViewScreen:
+    """Shows a live camera feed from the PiCamera2 preview stream."""
+
+    def __init__(self, ui_system):
+        self.ui = ui_system
+        self.font = pygame.font.SysFont(None, 30)
+        self.camera = Camera()
+        self.preview_surface: Optional[pygame.Surface] = None
+        self.status = "Starting camera..."
+        self.last_frame_time = 0.0
+        self.frame_interval_s = 0.08
+        self._started = False
+
+    def _start_camera(self):
+        if not self._started:
+            try:
+                self.camera.start()
+                self.status = "Live view active"
+            except Exception as exc:
+                self.status = f"Camera start failed: {exc}"
+            self._started = True
+
+    def _stop_camera(self):
+        try:
+            self.camera.stop()
+        except Exception:
+            pass
+
+    def handle_event(self, event):
+        if event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE, pygame.K_BACKSPACE):
+            self._stop_camera()
+            self.ui.current_screen = HomeScreen(self.ui)
+
+    def update(self):
+        self._start_camera()
+        if self.status != "Live view active":
+            return
+
+        now = time.time()
+        if now - self.last_frame_time < self.frame_interval_s:
+            return
+
+        self.last_frame_time = now
+        try:
+            frame = self.camera.capture_frame()
+            if frame is None:
+                self.status = "No frame available"
+                return
+
+            # Picamera2 returns RGB frames; pygame wants a (width, height) surface.
+            surface = pygame.surfarray.make_surface(frame.swapaxes(0, 1))
+            self.preview_surface = surface
+        except Exception as exc:
+            self.status = f"Live view error: {exc}"
+
+    def draw(self, screen):
+        screen.fill((0, 0, 0))
+
+        title = self.font.render("Live View", True, (200, 200, 200))
+        title_rect = title.get_rect(center=(WIDTH // 2, 28))
+        screen.blit(title, title_rect)
+
+        if self.preview_surface is not None:
+            max_w = WIDTH - 20
+            max_h = HEIGHT - 90
+            frame_w, frame_h = self.preview_surface.get_size()
+            scale = min(max_w / frame_w, max_h / frame_h, 1.0)
+            display_size = (max(1, int(frame_w * scale)), max(1, int(frame_h * scale)))
+            image = pygame.transform.smoothscale(self.preview_surface, display_size)
+            image_rect = image.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 10))
+            screen.blit(image, image_rect)
+        else:
+            message = self.font.render(self.status, True, (180, 180, 180))
+            message_rect = message.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            screen.blit(message, message_rect)
+
+        help_text = self.font.render("Esc / Enter / Space / Backspace to return", True, (160, 160, 160))
+        help_rect = help_text.get_rect(center=(WIDTH // 2, HEIGHT - 24))
+        screen.blit(help_text, help_rect)
 
 
 class ManualModeScreen:
