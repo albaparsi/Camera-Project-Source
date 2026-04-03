@@ -5,18 +5,29 @@ import time
 import subprocess
 from pathlib import Path
 
-import board
-import busio
-import adafruit_tsl2591
 
-
-LIGHT_THRESHOLD = 1000
+LIGHT_THRESHOLD = 2
 CHECK_INTERVAL = 0.05
 MOTOR_SCRIPT = Path(__file__).resolve().parent / "motor_driver.py"
+MONITOR_SCRIPT = Path(__file__).resolve()
 
 
 def start_motor(script_path: Path) -> subprocess.Popen:
 	"""Launch the motor runner script using the current Python interpreter."""
+
+	return subprocess.Popen([sys.executable, str(script_path)])
+
+
+def start_light_monitor(script_path: Path = MONITOR_SCRIPT) -> subprocess.Popen:
+	"""Launch this module as a background light-monitor process."""
+
+	# Pre-flight dependency check so callers get a clear failure reason.
+	try:
+		import board  # noqa: F401
+		import busio  # noqa: F401
+		import adafruit_tsl2591  # noqa: F401
+	except Exception as exc:
+		raise RuntimeError(f"Light sensor dependencies unavailable: {exc}") from exc
 
 	return subprocess.Popen([sys.executable, str(script_path)])
 
@@ -35,8 +46,18 @@ def stop_motor(proc: subprocess.Popen | None) -> None:
 			proc.kill()
 
 
+def stop_process(proc: subprocess.Popen | None) -> None:
+	"""Terminate any subprocess launched by this module."""
+
+	stop_motor(proc)
+
+
 def monitor_light(threshold: float = LIGHT_THRESHOLD, interval: float = CHECK_INTERVAL) -> None:
 	"""Start/stop the motor script based on light level crossings."""
+
+	import board
+	import busio
+	import adafruit_tsl2591
 
 	i2c = busio.I2C(board.SCL, board.SDA)
 	sensor = adafruit_tsl2591.TSL2591(i2c)

@@ -130,6 +130,18 @@ def run_capture_plan(
 
     raw_by_filter: Dict[int, List[Path]] = {f.filter_id: [] for f in enabled_filters}
     metadata_log: List[Dict[str, Any]] = []
+    light_monitor_proc = None
+
+    # Try to run the light-triggered motor loop alongside capture.
+    # If hardware deps are unavailable (desktop dev), continue normally.
+    try:
+        from hardware.motor import start_light_monitor, stop_process  # local import by design
+
+        light_monitor_proc = start_light_monitor()
+        print("[HW] Light monitor started")
+    except Exception as exc:
+        stop_process = None
+        print(f"[HW] Light monitor unavailable: {exc}")
 
     camera.start()
     try:
@@ -227,6 +239,9 @@ def run_capture_plan(
             "log": metadata_log,
         }
     finally:
+        if light_monitor_proc is not None and stop_process is not None:
+            stop_process(light_monitor_proc)
+            print("[HW] Light monitor stopped")
         camera.stop()
 
 

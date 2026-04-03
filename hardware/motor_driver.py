@@ -18,8 +18,9 @@ SEQUENCE = [
     [1, 0, 0, 1],
 ]
 
-STEP_DELAY = 0.01
-
+STEPS_PER_REV = 4096
+RPM = 10
+STEP_DELAY = 60 / (STEPS_PER_REV * RPM)
 
 def setup() -> None:
     GPIO.setmode(GPIO.BCM)

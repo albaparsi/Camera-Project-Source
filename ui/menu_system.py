@@ -1,8 +1,11 @@
 # ui/menu_system.py
 import sys
 import pygame
+from .FindStart import run_find_start
 
 from ui.screens import HomeScreen
+
+run_find_start()
 
 WIDTH, HEIGHT = 800, 480
 
@@ -53,13 +56,22 @@ class UISystem:
         if not self.encoder:
             return
 
-        move, select = self.encoder.poll()
+        # ✅ Updated: unpack horizontal movement too
+        move, select, horiz = self.encoder.poll()
 
+        # Vertical movement (UP/DOWN)
         if move:
             key = pygame.K_DOWN if move > 0 else pygame.K_UP
             evt = pygame.event.Event(pygame.KEYDOWN, key=key)
             self.current_screen.handle_event(evt)
 
+        # Horizontal movement (LEFT/RIGHT)
+        if horiz:
+            key = pygame.K_RIGHT if horiz > 0 else pygame.K_LEFT
+            evt = pygame.event.Event(pygame.KEYDOWN, key=key)
+            self.current_screen.handle_event(evt)
+
+        # Select button (ENTER)
         if select:
             evt = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)
             self.current_screen.handle_event(evt)
