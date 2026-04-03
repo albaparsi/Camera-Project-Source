@@ -68,9 +68,21 @@ class CapturePlan:
 
 
 class FilterWheelMock:
-    """Temporary wheel stub; replace later with real motor control."""
+    """Fallback wheel used when motor hardware is unavailable."""
     def move_to(self, filter_id: int) -> None:
         return
+
+
+def _make_default_wheel() -> object:
+    """Create a real wheel controller, or fall back to mock on non-Pi setups."""
+
+    try:
+        from hardware.filter_wheel import StepperFilterWheel
+
+        return StepperFilterWheel(start_position=0)
+    except Exception as exc:
+        print(f"[HW] Stepper wheel unavailable: {exc}. Using mock wheel.")
+        return FilterWheelMock()
 
 
 def _safe_name(s: str) -> str:
@@ -119,30 +131,17 @@ def run_capture_plan(
     if plan.frames_per_filter < 1 or plan.frames_per_filter > 10:
         raise ValueError("frames_per_filter must be between 1 and 10")
 
-    if wheel is None:
-        wheel = FilterWheelMock()
-
     enabled_filters = [f for f in plan.filters if f.enabled]
     if not enabled_filters:
         raise ValueError("No enabled filters in plan")
+
+    if wheel is None:
+        wheel = _make_default_wheel()
 
     print(f"[PLAN] image_ext={plan.image_ext}, output_scale={plan.output_scale}, stack_per_filter={plan.stack_per_filter}")
 
     raw_by_filter: Dict[int, List[Path]] = {f.filter_id: [] for f in enabled_filters}
     metadata_log: List[Dict[str, Any]] = []
-    light_monitor_proc = None
-
-    # Try to run the light-triggered motor loop alongside capture.
-    # If hardware deps are unavailable (desktop dev), continue normally.
-    try:
-        from hardware.motor import start_light_monitor, stop_process  # local import by design
-
-        light_monitor_proc = start_light_monitor()
-        print("[HW] Light monitor started")
-    except Exception as exc:
-        stop_process = None
-        print(f"[HW] Light monitor unavailable: {exc}")
-
     camera.start()
     try:
         for seq in range(plan.sequences):
@@ -239,9 +238,6 @@ def run_capture_plan(
             "log": metadata_log,
         }
     finally:
-        if light_monitor_proc is not None and stop_process is not None:
-            stop_process(light_monitor_proc)
-            print("[HW] Light monitor stopped")
         camera.stop()
 
 

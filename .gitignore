@@ -1,1 +1,6 @@
-captures/
+# Capture outputs (large generated artifacts)
+captures/**
+
+# Python cache inside captures (defensive)
+captures/**/__pycache__/
+captures/**/*.pyc
