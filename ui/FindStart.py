@@ -80,20 +80,27 @@ def run_find_start():
 
 			if current_state and not last_state:
 				timestamp = time.time()
+				print(f"Rising edge detected at step {step_index}, lux={avg_lux:.1f}")
 
 				if timestamps:
 					interval = timestamp - timestamps[-1]
+					print(f"Measured interval: {interval:.6f}s")
 
 					# Collect intervals above minimum threshold
 					if interval >= MIN_INTERVAL_FOR_BASELINE:
 						valid_intervals.append(interval)
+						print(f"Added to baseline samples ({len(valid_intervals)} total)")
+					else:
+						print(f"Ignored interval below baseline minimum ({MIN_INTERVAL_FOR_BASELINE:.6f}s)")
 
 					# Safe baseline calculation
 					num_intervals_for_baseline = min(BASELINE_CROSSES, len(valid_intervals))
 					if num_intervals_for_baseline > 0:
 						baseline = sum(valid_intervals[-num_intervals_for_baseline:]) / num_intervals_for_baseline
+						print(f"Baseline from last {num_intervals_for_baseline} samples: {baseline:.6f}s")
 					else:
 						baseline = interval  # fallback if no valid interval yet
+						print(f"Baseline fallback to current interval: {baseline:.6f}s")
 
 					print(f"Step {step_index}, Lux={avg_lux:.1f}, Interval={interval:.6f}s, Baseline={baseline:.6f}s")
 
@@ -139,8 +146,10 @@ def run_find_start():
 						break  # exit main loop after backtracking
 
 					previous_interval = interval
+					print(f"Previous interval updated to {previous_interval:.6f}s")
 
 				timestamps.append(timestamp)
+				print(f"Timestamp count is now {len(timestamps)}")
 
 			last_state = current_state
 			step_index += 1
