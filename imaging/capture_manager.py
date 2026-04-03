@@ -258,19 +258,22 @@ def run_capture_plan(
         }
     finally:
         camera.stop()
-        if light_off is not None:
+        homing_ran = False
+        if run_find_start is not None:
+            try:
+                print("[HW] Re-homing filter wheel with FindStart...")
+                run_find_start()
+                homing_ran = True
+            except Exception as exc:
+                print(f"[HW] FindStart failed after sequence: {exc}")
+
+        # Keep LED on through capture + homing; if homing did not run, turn it off here.
+        if light_off is not None and not homing_ran:
             try:
                 light_off()
                 print("[HW] Sequence LED off")
             except Exception as exc:
                 print(f"[HW] Failed to switch LED off: {exc}")
-
-        if run_find_start is not None:
-            try:
-                print("[HW] Re-homing filter wheel with FindStart...")
-                run_find_start()
-            except Exception as exc:
-                print(f"[HW] FindStart failed after sequence: {exc}")
 
 
 def make_auto_plan(
