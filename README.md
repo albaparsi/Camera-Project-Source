@@ -4,6 +4,11 @@ Kromico is an integrated multispectral camera designed to capture high-quality i
 
 The project was developed to make multispectral imaging more compact, practical, and easier to use outside of traditional lab-style setups.
 
+![camera](kromico-closer-up-still.jpeg)
+![camera1](kromico-camera-closer-up-compressed.jpeg)
+Photo by Mary Dwyer
+
+
 ## Overview
 
 Traditional multispectral imaging systems can be large, expensive, and inconvenient to deploy. Kromico addresses this by combining embedded control, filter switching, and on-device interaction into a single self-contained platform.
